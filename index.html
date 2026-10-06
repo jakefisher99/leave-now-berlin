@@ -1,0 +1,1000 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Leave Now">
+<meta name="theme-color" content="#14171f">
+<title>Leave Now Berlin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one narrow column, like a platform display: big "leave at" board on top, trip rows below. */
+:root {
+  --bg: #eef0f3;
+  --panel: #ffffff;
+  --ink: #161a22;
+  --muted: #5d6573;
+  --line: #d9dde4;
+  --board: #14171f;
+  --board-ink: #f4f5f7;
+  --signal: #f2b705;      /* platform-sign amber */
+  --good: #1b7f4a;
+  --warn: #b35c00;
+  --bad: #c0282d;
+  --good-bg: #e2f3e9;
+  --warn-bg: #fdefdc;
+  --bad-bg: #fbe3e3;
+  --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d0f14; --panel: #181b23; --ink: #e9ebef; --muted: #9aa2b1; --line: #2a2f3a;
+    --board: #1f2430; --board-ink: #f4f5f7; --signal: #f5c230;
+    --good: #4cc584; --warn: #f0a24a; --bad: #ff6b6f;
+    --good-bg: #173325; --warn-bg: #3a2912; --bad-bg: #3d1a1c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d0f14; --panel: #181b23; --ink: #e9ebef; --muted: #9aa2b1; --line: #2a2f3a;
+  --board: #1f2430; --board-ink: #f4f5f7; --signal: #f5c230;
+  --good: #4cc584; --warn: #f0a24a; --bad: #ff6b6f;
+  --good-bg: #173325; --warn-bg: #3a2912; --bad-bg: #3d1a1c;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 15px/1.45 var(--body);
+  padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px calc(env(safe-area-inset-bottom, 0px) + 32px);
+  -webkit-font-smoothing: antialiased;
+}
+main { max-width: 34rem; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+
+header.top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.brand { font: 700 1.35rem/1 var(--display); letter-spacing: .02em; text-transform: uppercase; }
+.brand span { color: var(--muted); font-weight: 500; }
+.iconbtn {
+  border: 1px solid var(--line); background: var(--panel); border-radius: 10px;
+  padding: 7px 12px; font-size: .85rem; font-weight: 500;
+}
+
+.seg { display: grid; grid-template-columns: 1fr 1fr; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 3px; gap: 3px; }
+.seg button { border: 0; background: transparent; padding: 9px 6px; border-radius: 9px; font-weight: 600; font-size: .92rem; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+
+.route { font-size: .85rem; color: var(--muted); display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.route b { color: var(--ink); font-weight: 600; }
+
+/* The board */
+.board { background: var(--board); color: var(--board-ink); border-radius: 16px; padding: 18px 18px 16px; display: flex; flex-direction: column; gap: 10px; }
+.board .eyebrow { font: 600 .78rem/1 var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--signal); }
+.board .big { font: 700 clamp(3rem, 16vw, 4.6rem)/.9 var(--display); letter-spacing: .01em; }
+.board .big small { font-size: .42em; font-weight: 600; color: #b9bfcc; margin-left: .2em; letter-spacing: .03em; }
+.board .sub { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .92rem; color: #c9ced8; }
+.board .sub b { color: var(--board-ink); font-weight: 600; }
+.board.urgent .big { color: var(--signal); }
+.board.gone .big { color: #8a91a0; }
+.board .legs { margin-top: 4px; }
+.board .hint { font-size: .85rem; color: #c9ced8; }
+
+/* Trips list */
+.list { display: flex; flex-direction: column; gap: 8px; }
+.listhead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: .8rem; color: var(--muted); padding: 4px 2px 0; }
+.listhead h2 { margin: 0; font: 600 .78rem/1 var(--body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.trip { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; grid-template-columns: auto 1fr auto; gap: 4px 14px; align-items: center; text-align: left; width: 100%; }
+.trip[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.trip.past { opacity: .5; }
+.trip .leave { font: 700 1.7rem/1 var(--display); min-width: 3.4em; }
+.trip .leave small { display: block; font: 500 .72rem/1.2 var(--body); color: var(--muted); letter-spacing: .04em; text-transform: uppercase; margin-top: 3px; }
+.trip .mid { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.trip .right { text-align: right; font-size: .85rem; color: var(--muted); }
+.trip .right b { display: block; color: var(--ink); font: 600 1.05rem/1.1 var(--body); }
+
+.legs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.badge { display: inline-flex; align-items: center; justify-content: center; min-width: 2.1em; height: 1.5em; padding: 0 .35em; border-radius: 4px; font: 700 .85rem/1 var(--display); letter-spacing: .03em; color: #fff; }
+.badge.sbahn { border-radius: 999px; }
+.badge.walk { background: transparent; color: var(--muted); font: 500 .78rem/1 var(--body); min-width: 0; padding: 0 .1em; }
+.board .badge.walk { color: #b9bfcc; }
+.sep { color: var(--muted); font-size: .7rem; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { font-size: .72rem; font-weight: 600; padding: 2px 7px; border-radius: 999px; background: var(--bg); color: var(--muted); white-space: nowrap; }
+.chip.good { background: var(--good-bg); color: var(--good); }
+.chip.warn { background: var(--warn-bg); color: var(--warn); }
+.chip.bad { background: var(--bad-bg); color: var(--bad); }
+.board .chip { background: rgba(255,255,255,.1); color: #dfe2e8; }
+.board .chip.good { background: rgba(76,197,132,.18); color: #7fe0ab; }
+.board .chip.warn { background: rgba(240,162,74,.2); color: #ffc585; }
+.board .chip.bad { background: rgba(255,107,111,.2); color: #ffa3a5; }
+
+/* Detail */
+.detail { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 6px 14px; }
+.step { display: grid; grid-template-columns: 3.2rem 1fr; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.step:last-child { border-bottom: 0; }
+.step .t { font: 600 1.05rem/1.2 var(--display); }
+.step .t s { display: block; color: var(--muted); font-weight: 500; font-size: .85rem; }
+.step .what { min-width: 0; font-size: .9rem; }
+.step .what .muted { color: var(--muted); font-size: .82rem; }
+.step.wait .what { color: var(--warn); font-weight: 600; }
+.step.wait.ok .what { color: var(--muted); font-weight: 500; }
+.remark { font-size: .8rem; color: var(--bad); margin-top: 3px; }
+
+.note { font-size: .82rem; color: var(--muted); text-align: center; }
+.error { background: var(--bad-bg); color: var(--bad); border-radius: 12px; padding: 12px 14px; font-size: .9rem; }
+
+/* Settings */
+dialog { border: 0; border-radius: 16px; padding: 0; background: var(--panel); color: var(--ink); width: min(34rem, calc(100vw - 24px)); max-height: calc(100dvh - 24px); }
+dialog::backdrop { background: rgba(10,12,16,.55); }
+.sheet { padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+.sheet h2 { margin: 0; font: 700 1.5rem/1 var(--display); text-transform: uppercase; letter-spacing: .02em; }
+.field { display: flex; flex-direction: column; gap: 6px; position: relative; }
+.field label { font-size: .8rem; font-weight: 600; color: var(--muted); }
+.field .help { font-size: .78rem; color: var(--muted); }
+.field input, .field select { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
+.picked { font-size: .82rem; color: var(--good); }
+.sugg { list-style: none; margin: 0; padding: 4px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); display: flex; flex-direction: column; }
+.sugg button { text-align: left; border: 0; background: transparent; padding: 8px 10px; border-radius: 8px; width: 100%; font-size: .9rem; }
+.sugg button:hover, .sugg button:focus-visible { background: var(--bg); }
+.sugg small { color: var(--muted); display: block; font-size: .75rem; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.actions { display: flex; gap: 8px; justify-content: flex-end; }
+.primary { background: var(--board); color: var(--board-ink); border: 0; border-radius: 10px; padding: 11px 18px; font-weight: 600; }
+.ghost { background: transparent; border: 1px solid var(--line); border-radius: 10px; padding: 11px 18px; }
+@media (max-width: 380px) { .row2 { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: no-preference) { .board .big { transition: color .3s; } }
+
+/* Leave-time plan on the board */
+.plan { display: flex; flex-direction: column; gap: 4px; font-size: .92rem; color: #c9ced8; border-top: 1px solid rgba(255,255,255,.12); padding-top: 10px; }
+.plan b { color: var(--board-ink); font-weight: 600; }
+.ladder { display: flex; flex-direction: column; gap: 4px; border-top: 1px solid rgba(255,255,255,.12); padding-top: 10px; }
+.ladder .lbl { font: 600 .72rem/1 var(--body); letter-spacing: .1em; text-transform: uppercase; color: #9aa2b1; margin-bottom: 2px; }
+.ladder button { display: grid; grid-template-columns: 4.2rem 1fr; gap: 10px; align-items: baseline; text-align: left; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.04); border-radius: 8px; padding: 7px 10px; color: #dfe2e8; font-size: .88rem; }
+.ladder button[aria-current="true"] { border-color: var(--signal); background: rgba(245,194,48,.1); }
+.ladder button .lt { font: 700 1.2rem/1 var(--display); color: var(--board-ink); }
+.ladder button .extra { color: #9aa2b1; font-size: .78rem; }
+.missed { font-size: .85rem; color: #b9bfcc; }
+.missed b { color: var(--board-ink); }
+
+/* Change rows in the step list */
+.step.change .t { color: var(--warn); }
+.step.change.walk .t { color: var(--muted); }
+.step.change.miss .t, .step.change.run .t { color: var(--bad); }
+.pacescale { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.pacescale span { font-size: .74rem; padding: 2px 7px; border-radius: 6px; border: 1px solid var(--line); color: var(--muted); }
+.pacescale span.on { border-color: var(--ink); color: var(--ink); font-weight: 600; }
+
+/* Settings: change times */
+.sheet h3 { margin: 6px 0 0; font: 700 1.1rem/1 var(--display); text-transform: uppercase; letter-spacing: .03em; }
+.trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.trio label { font-size: .72rem; }
+.checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: 6px; }
+.checks label { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; font-size: .88rem; font-weight: 500; color: var(--ink); cursor: pointer; }
+.checks input { width: 1.05rem; height: 1.05rem; margin: 0; accent-color: var(--ink); }
+.checks .badge { font-size: .75rem; height: 1.4em; min-width: 1.9em; }
+.linechips { display: flex; flex-wrap: wrap; gap: 6px; }
+.linechips button { border: 2px solid var(--line); background: transparent; color: var(--muted); border-radius: 6px; min-width: 2.9rem; padding: 5px 6px; font: 700 .95rem/1 var(--display); letter-spacing: .03em; }
+.linechips button.s { border-radius: 999px; }
+.linechips button[aria-pressed="true"] { color: #fff; border-color: transparent; }
+.linechips .grp { width: 100%; font-size: .72rem; font-weight: 600; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; margin-top: 4px; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.presets button { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 6px 12px; font-size: .82rem; font-weight: 500; }
+.trio input { padding: 8px; text-align: center; }
+.stations { display: flex; flex-direction: column; gap: 10px; }
+.strow { border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.strow .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 600; font-size: .9rem; }
+.strow .top button { border: 0; background: transparent; color: var(--bad); font-size: .8rem; padding: 4px; }
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <div class="brand">Leave Now <span>Berlin</span></div>
+    <button class="iconbtn" id="openSettings" type="button">Settings</button>
+  </header>
+
+  <div class="seg" role="group" aria-label="Direction">
+    <button type="button" id="dirWork" aria-pressed="true">To work</button>
+    <button type="button" id="dirHome" aria-pressed="false">Home</button>
+  </div>
+
+  <div class="seg" role="group" aria-label="Mode">
+    <button type="button" id="modeNext" aria-pressed="true">Next trips</button>
+    <button type="button" id="modeArrive" aria-pressed="false">Arrive by 09:00</button>
+  </div>
+
+  <div class="route" id="route"></div>
+
+  <section class="board" id="board" aria-live="polite">
+    <div class="eyebrow">Leave in</div>
+    <div class="big num">…</div>
+    <div class="hint">Loading live departures</div>
+  </section>
+
+  <div id="err" class="error" hidden></div>
+
+  <section id="detailWrap" hidden>
+    <div class="listhead"><h2>Step by step</h2></div>
+    <div class="detail" id="detail"></div>
+  </section>
+
+  <section>
+    <div class="listhead"><h2 id="listTitle">Upcoming trips</h2><span id="updated" class="num"></span></div>
+    <div class="list" id="list"></div>
+  </section>
+
+  <p class="note">Live times from BVG/VBB via transport.rest. Refreshes every minute.<br>Tap a trip to see where the waiting happens.</p>
+</main>
+
+<dialog id="settings">
+  <form class="sheet" id="settingsForm" method="dialog">
+    <h2>Your commute</h2>
+    <div class="field">
+      <label for="homeInput">Home (address or stop)</label>
+      <input id="homeInput" autocomplete="off" placeholder="e.g. Weserstraße 50">
+      <div class="picked" id="homePicked"></div>
+      <ul class="sugg" id="homeSugg" hidden></ul>
+    </div>
+    <div class="field">
+      <label for="access">Getting to the train</label>
+      <div class="seg" role="group" aria-label="Getting to the train">
+        <button type="button" id="accessBike" aria-pressed="true">Bike to a station</button>
+        <button type="button" id="accessWalk" aria-pressed="false">Walk</button>
+      </div>
+    </div>
+    <div id="bikeFields" class="sheet" style="padding:0">
+      <div class="field">
+        <label for="bikeStopInput">Station she cycles to</label>
+        <input id="bikeStopInput" autocomplete="off" placeholder="e.g. U Hermannplatz">
+        <div class="picked" id="bikeStopPicked"></div>
+        <ul class="sugg" id="bikeStopSugg" hidden></ul>
+      </div>
+      <div class="field">
+        <label for="bikeMin">Door to platform by bike</label>
+        <select id="bikeMin">
+          <option value="3">3 min</option><option value="4">4 min</option><option value="5">5 min</option>
+          <option value="6">6 min</option><option value="7">7 min</option><option value="8">8 min</option>
+          <option value="10">10 min</option><option value="12">12 min</option><option value="15">15 min</option>
+        </select>
+        <span class="help">Include getting the bike out, locking it up and walking down to the platform.</span>
+      </div>
+    </div>
+    <div class="field">
+      <label for="workInput">Work (address or stop)</label>
+      <input id="workInput" autocomplete="off" placeholder="e.g. Friedrichstraße 100">
+      <div class="picked" id="workPicked"></div>
+      <ul class="sugg" id="workSugg" hidden></ul>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label for="arriveBy">Be at work by</label>
+        <input id="arriveBy" type="time" value="09:00">
+      </div>
+      <div class="field">
+        <label for="margin">Safety margin</label>
+        <select id="margin">
+          <option value="0">None</option>
+          <option value="1">1 min</option>
+          <option value="2">2 min</option>
+          <option value="3">3 min</option>
+          <option value="5">5 min</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label for="walk">Walking pace on the street</label>
+      <select id="walk">
+        <option value="slow">Relaxed</option>
+        <option value="normal">Normal</option>
+        <option value="fast">Brisk</option>
+      </select>
+      <span class="help">Safety margin is added before the leave time, e.g. for the stairs or the lift.</span>
+    </div>
+
+    <h3>Transport types</h3>
+    <div class="field">
+      <div class="checks" id="productChecks"></div>
+      <span class="help" id="productHelp">Only trips using the ticked types are shown. Walking and the bike ride are always included.</span>
+    </div>
+
+    <h3>Lines</h3>
+    <div class="field">
+      <span class="help">Pick the lines she wants to use. With none picked, any line is fine.</span>
+      <div class="presets">
+        <button type="button" id="presetSpandau">U6 + S-Bahn to Spandau (S3, S9)</button>
+        <button type="button" id="presetClear">Any line</button>
+      </div>
+      <div class="linechips" id="lineChips" role="group" aria-label="Lines"></div>
+      <span class="help" id="lineHelp"></span>
+    </div>
+
+    <h3>Changing trains</h3>
+    <div class="field">
+      <label for="fastest">Fastest she's happy to go when changing</label>
+      <select id="fastest">
+        <option value="walk">Relaxed walk only</option>
+        <option value="brisk">Brisk walk</option>
+        <option value="run">Run if it saves time</option>
+      </select>
+      <span class="help">The app looks for tighter connections than Google or BVG suggest. It recommends them only up to this pace.</span>
+    </div>
+    <div class="field">
+      <label>Minutes for a typical change (platform to platform)</label>
+      <div class="trio">
+        <div class="field"><label for="defWalk">Relaxed</label><input id="defWalk" type="number" min="0" max="20" inputmode="numeric"></div>
+        <div class="field"><label for="defBrisk">Brisk</label><input id="defBrisk" type="number" min="0" max="20" inputmode="numeric"></div>
+        <div class="field"><label for="defRun">Run</label><input id="defRun" type="number" min="0" max="20" inputmode="numeric"></div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Stations where she knows her own times</label>
+      <div class="stations" id="stationList"></div>
+      <input id="stationAddInput" autocomplete="off" placeholder="Add a station, e.g. Friedrichstraße">
+      <ul class="sugg" id="stationAddSugg" hidden></ul>
+      <div class="picked" id="stationAddPicked"></div>
+    </div>
+    <div class="actions">
+      <button type="button" class="ghost" id="cancelSettings">Cancel</button>
+      <button type="submit" class="primary" id="saveSettings">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(() => {
+  const APIS = ["https://v6.bvg.transport.rest", "https://v6.vbb.transport.rest"]; // same data; the second is a backup
+  const TZ = "Europe/Berlin";
+  const $ = (id) => document.getElementById(id);
+
+  // Example commute shown until real addresses are saved.
+  const EXAMPLE = {
+    home: { type: "location", address: "Sonnenallee 100 (example)", latitude: 52.482153, longitude: 13.439062 },
+    work: { type: "stop", id: "900100003", name: "S+U Alexanderplatz (example)" },
+    arriveBy: "09:00", margin: 1, walk: "normal", example: true, products: null,
+    access: "bike", bikeStop: { type: "stop", id: "900078101", name: "U Hermannplatz (example)" }, bikeMin: 5
+  };
+  // How long a change takes her, in minutes, at each pace.
+  const DEFAULT_PACE = {
+    fastest: "brisk",
+    def: { walk: 4, brisk: 3, run: 2 },
+    // Timed: U6 to S-Bahn platform in about 3 min at her normal pace.
+    stations: [{ id: "900100001", name: "S+U Friedrichstr. Bhf", walk: 3, brisk: 2, run: 2 }]
+  };
+  const PACES = ["walk", "brisk", "run"];
+  const PACE_LABEL = { walk: "Relaxed walk", brisk: "Brisk walk", run: "Run", miss: "Too tight" };
+  const rank = (k) => (k === "miss" ? 3 : PACES.indexOf(k));
+
+  const store = {
+    get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+  };
+
+  let cfg = Object.assign({}, EXAMPLE, store.get("leave-now-cfg") || {});
+  let pace = Object.assign({}, DEFAULT_PACE, store.get("leave-now-pace") || {});
+  let ui = Object.assign({ dir: "work", mode: "next" }, store.get("leave-now-ui") || {});
+  const biking = () => cfg.access === "bike" && cfg.bikeStop;
+  let trips = [];
+  let selected = null;
+  let lastFetch = 0;
+  let loading = false;
+  let generation = 0;
+
+  // ---------- formatting ----------
+  const fmtTime = (d) => d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: TZ });
+  const mins = (ms) => Math.round(ms / 60000);
+  const placeName = (p) => (p.name || p.address || "").replace(/\s*\(Berlin\)$/, "");
+  const depOf = (l) => new Date(l.departure || l.plannedDeparture);
+  const arrOf = (l) => new Date(l.arrival || l.plannedArrival);
+  const iso = (ms) => new Date(ms).toISOString();
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  const LINE_COLORS = {
+    U1: "#7dad4c", U2: "#da421e", U3: "#16683d", U4: "#f0d722", U5: "#7e5330", U55: "#7e5330",
+    U6: "#8c6dab", U7: "#528dba", U8: "#224f86", U9: "#f3791d",
+    S1: "#de4da4", S2: "#005f27", S25: "#005f27", S26: "#005f27", S3: "#0a4c99",
+    S41: "#a9492d", S42: "#c86722", S45: "#cd9c53", S46: "#cd9c53", S47: "#cd9c53",
+    S5: "#eb7405", S7: "#816da6", S75: "#816da6", S8: "#66aa22", S85: "#66aa22", S9: "#992746"
+  };
+  const PRODUCT_COLORS = { tram: "#be1414", bus: "#a5027d", regional: "#e30613", express: "#6b7280", ferry: "#0080ba", suburban: "#008d4f", subway: "#115d91" };
+  function badge(leg) {
+    if (leg.walking) {
+      const m = mins(arrOf(leg) - depOf(leg));
+      return `<span class="badge walk">${leg.bike ? "bike" : "walk"} ${m || "<1"}′</span>`;
+    }
+    const line = leg.line || {};
+    const name = (line.name || "?").replace(/^Bus\s+/, "").replace(/^STR\s+/, "");
+    const bg = LINE_COLORS[name] || PRODUCT_COLORS[line.product] || "#555";
+    return `<span class="badge ${line.product === "suburban" ? "sbahn" : ""}" style="background:${bg};${name === "U4" ? "color:#111" : ""}">${esc(name)}</span>`;
+  }
+  const legsRow = (t) => `<div class="legs">${t.legs.filter((l) => !l.walking || l.bike || mins(arrOf(l) - depOf(l)) >= 1).map(badge).join('<span class="sep">›</span>')}</div>`;
+
+  // ---------- change times ----------
+  const stopIds = (s) => (s ? [s.id, s.station && s.station.id].filter(Boolean) : []);
+  function tableFor(a, b) {
+    const ids = [...stopIds(a), ...stopIds(b)];
+    return pace.stations.find((s) => ids.includes(s.id)) || pace.def;
+  }
+  function neededPace(change, tb) {
+    for (const k of PACES) if (change >= tb[k]) return k;
+    return "miss";
+  }
+
+  // ---------- trip analysis ----------
+  // The API can't route "bike to the station", so the trip starts (or ends) at her station
+  // and we add the bike ride ourselves.
+  function withBike(j) {
+    if (!biking()) return j;
+    const legs = j.legs.slice();
+    const ms = cfg.bikeMin * 60000;
+    const home = { name: placeName(cfg.home) };
+    if (ui.dir === "work") {
+      const t = depOf(legs[0]);
+      legs.unshift({ walking: true, bike: true, origin: home, destination: legs[0].origin, departure: iso(t - ms), arrival: t.toISOString() });
+    } else {
+      const last = legs[legs.length - 1], t = arrOf(last);
+      legs.push({ walking: true, bike: true, origin: last.destination, destination: home, departure: t.toISOString(), arrival: iso(+t + ms) });
+    }
+    return Object.assign({}, j, { legs });
+  }
+
+  function analyse(raw) {
+    const j = withBike(raw);
+    const legs = j.legs;
+    const leave = new Date(depOf(legs[0]) - cfg.margin * 60000);
+    const arr = arrOf(legs[legs.length - 1]);
+    const rideIdx = legs.map((l, i) => (l.walking ? -1 : i)).filter((i) => i >= 0);
+    const transfers = [];
+    for (let k = 1; k < rideIdx.length; k++) {
+      const P = legs[rideIdx[k - 1]], N = legs[rideIdx[k]];
+      const change = mins(depOf(N) - arrOf(P));
+      const tb = tableFor(P.destination, N.origin);
+      const need = neededPace(change, tb);
+      transfers.push({ nIdx: rideIdx[k], at: placeName(N.origin), change, tb, need, wait: need === "miss" ? 0 : Math.max(0, change - tb[need]) });
+    }
+    let firstWait = 0;
+    if (rideIdx.length && rideIdx[0] > 0) firstWait = Math.max(0, mins(depOf(legs[rideIdx[0]]) - arrOf(legs[rideIdx[0] - 1])));
+    const hardest = transfers.reduce((a, b) => (!a || rank(b.need) > rank(a.need) ? b : a), null);
+    const rides = rideIdx.map((i) => legs[i]);
+    const rideKey = (l) => (l.tripId || l.line?.name || "") + "@" + (l.plannedDeparture || l.departure);
+    return {
+      raw, legs, leave, arr, duration: mins(arr - leave), transfers, hardest,
+      pace: hardest ? hardest.need : "walk",
+      totalWait: firstWait + transfers.reduce((a, t) => a + t.wait, 0),
+      cancelled: legs.some((l) => l.cancelled),
+      delay: Math.round(Math.max(0, ...rides.map((l) => (l.departureDelay || 0) / 60))),
+      changes: Math.max(0, rides.length - 1),
+      first: rides[0],
+      key: rides.map(rideKey).join("|"),
+      arrKey: rides.length ? rideKey(rides[rides.length - 1]) : String(arr)
+    };
+  }
+  const acceptable = (t) => rank(t.pace) <= rank(pace.fastest);
+
+  function chips(t, big) {
+    const c = [];
+    if (t.cancelled) c.push(`<span class="chip bad">Cancelled</span>`);
+    if (t.best) c.push(`<span class="chip good">${ui.mode === "arrive" ? "Latest you can leave" : "Least time wasted"}</span>`);
+    if (t.hardest && t.pace !== "walk") {
+      const cls = t.pace === "brisk" ? "warn" : "bad";
+      const txt = t.pace === "miss" ? `Change at ${t.hardest.at} too tight` : `${PACE_LABEL[t.pace]} at ${t.hardest.at} (${t.hardest.change}′)`;
+      c.push(`<span class="chip ${cls}">${esc(txt)}</span>`);
+    }
+    c.push(`<span class="chip ${t.totalWait >= 6 ? "warn" : t.totalWait <= 2 ? "good" : ""}">${t.totalWait} min on platforms</span>`);
+    if (t.delay >= 2) c.push(`<span class="chip bad">+${t.delay} min delay</span>`);
+    if (big) c.push(`<span class="chip">${t.changes === 0 ? "No changes" : t.changes + " change" + (t.changes > 1 ? "s" : "")}</span>`);
+    return `<div class="chips">${c.join("")}</div>`;
+  }
+
+  // ---------- API ----------
+  function placeParams(prefix, p) {
+    const q = {};
+    if (p.type === "stop" || p.type === "station") q[prefix] = p.id;
+    else if (p.poi || p.type === "poi") Object.assign(q, { [prefix + ".id"]: p.id, [prefix + ".name"]: p.name, [prefix + ".latitude"]: p.latitude, [prefix + ".longitude"]: p.longitude });
+    else Object.assign(q, { [prefix + ".address"]: p.address, [prefix + ".latitude"]: p.latitude, [prefix + ".longitude"]: p.longitude });
+    return q;
+  }
+  let apiIdx = 0;
+  async function getJSON(path, params) {
+    let lastErr;
+    for (let n = 0; n < APIS.length; n++) {
+      const i = (apiIdx + n) % APIS.length;
+      try {
+        const res = await fetch(APIS[i] + path + "?" + new URLSearchParams(params));
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        apiIdx = i;
+        return data;
+      } catch (e) { lastErr = e; }
+    }
+    throw lastErr;
+  }
+  function arriveByDate() {
+    const [h, m] = (cfg.arriveBy || "09:00").split(":").map(Number);
+    const d = new Date(); d.setHours(h, m, 0, 0);
+    if (d < new Date()) d.setDate(d.getDate() + 1);
+    return d;
+  }
+  const ends = () => {
+    const homeEnd = biking() ? cfg.bikeStop : cfg.home;
+    return ui.dir === "work" ? [homeEnd, cfg.work] : [cfg.work, homeEnd];
+  };
+  const PRODUCTS = [
+    { k: "subway", label: "U-Bahn", color: "#115d91" },
+    { k: "suburban", label: "S-Bahn", color: "#008d4f", round: true },
+    { k: "tram", label: "Tram", color: "#be1414" },
+    { k: "bus", label: "Bus", color: "#a5027d" },
+    { k: "regional", label: "RE / RB trains", color: "#e30613" },
+    { k: "ferry", label: "Ferry", color: "#0080ba" }
+  ];
+  const productParams = () => {
+    const on = cfg.products || {};
+    const q = {};
+    for (const p of PRODUCTS) q[p.k] = on[p.k] === false ? "false" : "true";
+    q.express = on.regional === false ? "false" : "true"; // long-distance trains follow the regional setting
+    if (chosenLines().length) {
+      // Chosen lines narrow the planner to U-Bahn and/or S-Bahn.
+      for (const k of Object.keys(q)) q[k] = "false";
+      q.subway = String(chosenLines().some((l) => l.startsWith("U")));
+      q.suburban = String(chosenLines().some((l) => l.startsWith("S")));
+    }
+    return q;
+  };
+  const U_LINES = ["U1", "U2", "U3", "U4", "U5", "U6", "U7", "U8", "U9"];
+  const S_LINES = ["S1", "S2", "S25", "S26", "S3", "S41", "S42", "S45", "S46", "S47", "S5", "S7", "S75", "S8", "S85", "S9"];
+  const chosenLines = () => cfg.lines || [];
+  const lineOk = (raw) => !chosenLines().length || raw.legs.every((l) => l.walking || chosenLines().includes(l.line?.name));
+  function onlyText() {
+    if (chosenLines().length) return `<span>· only ${chosenLines().join(", ")}</span>`;
+    const on = PRODUCTS.filter((p) => (cfg.products || {})[p.k] !== false);
+    return on.length === PRODUCTS.length ? "" : `<span>· ${on.map((p) => p.label).join(" + ")} only</span>`;
+  }
+  const common = () => Object.assign({ stopovers: "false", remarks: "true", language: "en", walkingSpeed: cfg.walk }, productParams());
+
+  async function fetchTrips() {
+    if (loading) return;
+    loading = true;
+    const gen = ++generation;
+    const [from, to] = ends();
+    const q = Object.assign({}, placeParams("from", from), placeParams("to", to), common(), { results: 6 });
+    const bikeHead = biking() && ui.dir === "work" ? cfg.bikeMin * 60000 : 0;
+    const bikeTail = biking() && ui.dir === "home" ? cfg.bikeMin * 60000 : 0;
+    if (ui.mode === "arrive") q.arrival = iso(arriveByDate() - bikeTail);
+    else q.departure = iso(Date.now() - 2 * 60000 + bikeHead);
+    let base = [];
+    try {
+      let data = await getJSON("/journeys", q);
+      if (gen !== generation) return;
+      base = data.journeys || [];
+      if (chosenLines().length) {
+        // The planner can't filter by line, so ask for more pages and keep the matching trips.
+        const refKey = ui.mode === "arrive" ? "earlierRef" : "laterRef";
+        const paramKey = ui.mode === "arrive" ? "earlierThan" : "laterThan";
+        for (let page = 0; page < 3 && base.filter(lineOk).length < 4 && data[refKey]; page++) {
+          const pq = Object.assign({}, q, { [paramKey]: data[refKey] });
+          delete pq.departure; delete pq.arrival;
+          data = await getJSON("/journeys", pq);
+          if (gen !== generation) return;
+          base = base.concat(data.journeys || []);
+        }
+        base = base.filter(lineOk);
+      }
+      setTrips(base.map(analyse));
+      lastFetch = Date.now();
+      $("err").hidden = true;
+    } catch (e) {
+      $("err").hidden = false;
+      $("err").textContent = "Couldn't load live times (" + e.message + "). The transit API is sometimes busy. It will try again within a minute.";
+    } finally {
+      if (gen === generation) { loading = false; render(); }
+    }
+    if (gen !== generation || !base.length) return;
+    // Second pass: look for tighter connections the planner doesn't offer.
+    try {
+      const extra = await findQuickChanges(base, to);
+      if (gen !== generation || !extra.length) return;
+      setTrips(base.concat(extra).map(analyse));
+      render();
+    } catch {}
+  }
+
+  function setTrips(list) {
+    list = list.filter((t) => lineOk(t.raw));
+    const seen = new Set();
+    list = list.filter((t) => (seen.has(t.key) ? false : seen.add(t.key)));
+    // Drop a trip when another one lets her leave later (or arrive earlier) without needing a faster change.
+    list = list.filter((x) => !list.some((y) => y !== x && !y.cancelled && rank(y.pace) <= rank(x.pace) &&
+      y.leave >= x.leave && y.arr <= x.arr && (y.leave > x.leave || y.arr < x.arr)));
+    list.sort((a, b) => a.leave - b.leave || a.arr - b.arr);
+    trips = list;
+  }
+
+  // Build extra trip variants:
+  //  (1) "later start": a later train on the first line that still reaches the same connection if she changes quickly;
+  //  (2) "earlier onward": after arriving at a change, a quick change catches an earlier train onward.
+  async function findQuickChanges(base, to) {
+    const out = [];
+    const shift = (l, d) => {
+      const c = Object.assign({}, l);
+      for (const k of ["departure", "plannedDeparture", "arrival", "plannedArrival"]) if (c[k]) c[k] = iso(new Date(c[k]).getTime() + d);
+      return c;
+    };
+    const rideIdx = (raw) => raw.legs.map((l, i) => (l.walking ? -1 : i)).filter((i) => i >= 0);
+
+    // (1) group by first line so one departures request serves several trips
+    const groups = new Map();
+    for (const raw of base) {
+      const r = rideIdx(raw);
+      if (r.length < 2) continue;
+      const F = raw.legs[r[0]];
+      const key = [F.origin.id, F.line?.name, F.direction].join("|");
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push({ raw, fi: r[0], ni: r[1] });
+    }
+    const jobs = [];
+    for (const items of groups.values()) {
+      jobs.push((async () => {
+        const F0 = items[0].raw.legs[items[0].fi];
+        const start = Math.min(...items.map((x) => +depOf(x.raw.legs[x.fi])));
+        const end = Math.max(...items.map((x) => +depOf(x.raw.legs[x.ni])));
+        const data = await getJSON(`/stops/${encodeURIComponent(F0.origin.id)}/departures`, {
+          when: iso(start), duration: Math.min(120, Math.max(10, mins(end - start) + 5)), results: 60, remarks: "false", language: "en"
+        }, productParams());
+        const deps = (data.departures || data).filter((x) => x.when && !x.cancelled && x.line?.name === F0.line?.name && x.direction === F0.direction);
+        for (const { raw, fi, ni } of items) {
+          const F = raw.legs[fi], N = raw.legs[ni];
+          const d0 = +depOf(F), ride = arrOf(F) - depOf(F), n0 = +depOf(N);
+          const tb = tableFor(F.destination, N.origin);
+          const used = new Set();
+          for (const k of PACES) {
+            const fits = deps.filter((x) => +new Date(x.when) > d0 && x.tripId !== F.tripId && +new Date(x.when) + ride + tb[k] * 60000 <= n0);
+            if (!fits.length) continue;
+            const x = fits[fits.length - 1];
+            if (used.has(x.tripId)) continue;
+            used.add(x.tripId);
+            const when = +new Date(x.when), planned = +new Date(x.plannedWhen || x.when), delta = when - d0;
+            const legs = raw.legs.map((l, i) => {
+              if (i < fi || (i > fi && i < ni)) return shift(l, delta);
+              if (i !== fi) return l;
+              return Object.assign({}, l, {
+                tripId: x.tripId, departure: x.when, plannedDeparture: x.plannedWhen || x.when, departureDelay: x.delay,
+                departurePlatform: x.platform || l.departurePlatform, arrival: iso(when + ride), plannedArrival: iso(planned + ride),
+                cancelled: false, remarks: []
+              });
+            });
+            out.push(Object.assign({}, raw, { legs }));
+          }
+        }
+      })());
+    }
+
+    // (2) for the first few trips, try a quick change onto an earlier onward train
+    const dest = to;
+    for (const raw of base.slice(0, 4)) {
+      const r = rideIdx(raw);
+      for (let k = 1; k < r.length; k++) {
+        const P = raw.legs[r[k - 1]], N = raw.legs[r[k]];
+        const tb = tableFor(P.destination, N.origin);
+        const earliest = +arrOf(P) + Math.min(tb.run, tb.brisk, tb.walk) * 60000;
+        if (+depOf(N) - earliest < 2 * 60000) continue;
+        jobs.push((async () => {
+          const data = await getJSON("/journeys", Object.assign({ from: N.origin.id, departure: iso(earliest), results: chosenLines().length ? 4 : 1 }, placeParams("to", dest), common()));
+          const rest = (data.journeys || []).find(lineOk);
+          if (!rest) return;
+          const restRide = rest.legs.find((l) => !l.walking);
+          if (!restRide || depOf(restRide) >= depOf(N)) return;
+          if (arrOf(rest.legs[rest.legs.length - 1]) >= arrOf(raw.legs[raw.legs.length - 1])) return;
+          out.push(Object.assign({}, raw, { legs: raw.legs.slice(0, r[k - 1] + 1).concat(rest.legs) }));
+        })());
+      }
+    }
+    await Promise.allSettled(jobs);
+    return out;
+  }
+
+  // ---------- choosing the recommendation ----------
+  function pickBest(list) {
+    list.forEach((t) => (t.best = false));
+    let ok = list.filter((t) => !t.cancelled && t.leave.getTime() > Date.now() - 30000);
+    if (ok.some(acceptable)) ok = ok.filter(acceptable);
+    if (!ok.length) return null;
+    let best;
+    if (ui.mode === "arrive") {
+      const fits = ok.filter((t) => t.arr <= arriveByDate());
+      best = (fits.length ? fits : ok).reduce((a, b) => (b.leave > a.leave ? b : a));
+    } else {
+      // Of the trips leaving in the next ~40 min, the shortest door to door. A later trip only
+      // wins if it saves at least 3 minutes, so she isn't told to wait at home to save one minute.
+      const soon = (ok.filter((t) => t.leave - Date.now() < 40 * 60000).length ? ok.filter((t) => t.leave - Date.now() < 40 * 60000) : ok)
+        .slice().sort((a, b) => a.leave - b.leave);
+      best = soon.reduce((a, b) => (b.duration <= a.duration - 3 ? b : a));
+    }
+    best.best = true;
+    return best;
+  }
+
+  // ---------- rendering ----------
+  function render() {
+    $("dirWork").setAttribute("aria-pressed", ui.dir === "work");
+    $("dirHome").setAttribute("aria-pressed", ui.dir === "home");
+    $("modeNext").setAttribute("aria-pressed", ui.mode === "next");
+    $("modeArrive").setAttribute("aria-pressed", ui.mode === "arrive");
+    $("modeArrive").textContent = ui.dir === "work" ? `Arrive by ${cfg.arriveBy}` : "Arrive by …";
+    $("modeArrive").disabled = ui.dir !== "work";
+    const from = ui.dir === "work" ? cfg.home : cfg.work;
+    const to = ui.dir === "work" ? cfg.work : cfg.home;
+    const via = biking() ? `<span>by bike via</span><b>${esc(placeName(cfg.bikeStop))}</b>` : "";
+    $("route").innerHTML = `<span>From</span><b>${esc(placeName(from))}</b>${ui.dir === "work" ? via : ""}<span>to</span><b>${esc(placeName(to))}</b>${ui.dir === "home" ? via : ""}${onlyText()}${cfg.example ? '<span>· example route, open Settings to set yours</span>' : ""}`;
+
+    const best = pickBest(trips);
+    const shown = (selected && trips.find((t) => t.key === selected)) || best;
+    renderBoard(shown, best);
+    renderDetail(shown);
+
+    $("listTitle").textContent = ui.mode === "arrive" ? `Arriving before ${cfg.arriveBy}` : "Upcoming trips";
+    $("updated").textContent = lastFetch ? "Updated " + fmtTime(new Date(lastFetch)) : "";
+    $("list").innerHTML = trips.map((t) => {
+      const past = t.leave.getTime() < Date.now() - 30000;
+      const lateArr = ui.mode === "arrive" && t.arr > arriveByDate();
+      return `<button type="button" class="trip ${past ? "past" : ""}" data-key="${esc(t.key)}" aria-pressed="${!!shown && t.key === shown.key}">
+        <div class="leave num">${fmtTime(t.leave)}<small>leave</small></div>
+        <div class="mid">${legsRow(t)}${chips(t)}</div>
+        <div class="right num"><b>${fmtTime(t.arr)}</b>${lateArr ? '<span style="color:var(--bad)">too late</span>' : t.duration + " min"}</div>
+      </button>`;
+    }).join("") || (lastFetch ? '<p class="note">No trips found for this time.</p>' : "");
+  }
+
+  function paceText(t) {
+    if (!t.hardest || t.pace === "walk") return t.changes ? "Relaxed changes" : "No changes";
+    if (t.pace === "miss") return `Change at ${t.hardest.at} is too tight`;
+    return `${PACE_LABEL[t.pace]} at ${t.hardest.at} (${t.hardest.change} min)`;
+  }
+
+  function renderBoard(t, best) {
+    const b = $("board");
+    b.className = "board";
+    if (!t) {
+      b.innerHTML = `<div class="eyebrow">Leave in</div><div class="big num">–</div><div class="hint">${lastFetch ? "No upcoming trips found." : "Loading live departures…"}</div>`;
+      return;
+    }
+    const ms = t.leave.getTime() - Date.now();
+    const m = Math.floor(ms / 60000);
+    let big, eyebrow = t === best ? "Leave in" : "This trip: leave in";
+    if (ms < -30000) { big = "Gone"; b.classList.add("gone"); }
+    else if (ms < 60000) { big = "Now"; b.classList.add("urgent"); }
+    else if (m >= 90) { big = fmtTime(t.leave); eyebrow = t === best ? "Leave at" : "This trip: leave at"; }
+    else { big = `${m}<small>min</small>`; if (m <= 3) b.classList.add("urgent"); }
+
+    const f = t.first;
+    const firstBit = f ? `${badge(f)} leaves <b>${fmtTime(depOf(f))}</b> from ${esc(placeName(f.origin))}${f.departurePlatform ? `, platform ${esc(f.departurePlatform)}` : ""}` : "";
+    const toStation = t.legs[0].bike ? `Cycle ${cfg.bikeMin} min` : t.legs[0].walking ? `Walk ${mins(arrOf(t.legs[0]) - depOf(t.legs[0]))} min` : "";
+
+    // Other leave times that reach the same final train, depending on how fast she changes.
+    const same = trips.filter((x) => x.arrKey === t.arrKey && !x.cancelled && x.pace !== "miss").sort((a, b2) => b2.leave - a.leave);
+    const ladder = same.length > 1 ? `<div class="ladder"><div class="lbl">Same arrival (${fmtTime(t.arr)}), your choice of pace</div>${same.map((x) =>
+      `<button type="button" data-key="${esc(x.key)}" aria-current="${x.key === t.key}"><span class="lt num">${fmtTime(x.leave)}</span><span>${esc(paceText(x))}${!acceptable(x) ? ' <span class="extra">· faster than she usually goes</span>' : ""}${x.totalWait ? ` <span class="extra">· ${x.totalWait} min on platforms</span>` : ""}</span></button>`).join("")}</div>` : "";
+
+    const next = trips.filter((x) => x.leave > t.leave && !x.cancelled && acceptable(x) && x.arrKey !== t.arrKey).sort((a, b2) => a.arr - b2.arr || b2.leave - a.leave)[0];
+    const missed = next ? `<div class="missed num">Missed it? Next best: leave <b>${fmtTime(next.leave)}</b>, arrive <b>${fmtTime(next.arr)}</b> (+${mins(next.arr - t.arr)} min)</div>` : "";
+
+    b.innerHTML = `
+      <div class="eyebrow">${eyebrow}</div>
+      <div class="big num">${big}</div>
+      <div class="sub num"><span>Out the door <b>${fmtTime(t.leave)}</b></span><span>Arrive <b>${fmtTime(t.arr)}</b></span><span><b>${t.duration}</b> min door to door</span></div>
+      <div class="plan num">
+        ${toStation ? `<div>${toStation}${cfg.margin ? ` (+${cfg.margin} min margin)` : ""} → ${firstBit}</div>` : `<div>${firstBit}</div>`}
+        <div>${esc(paceText(t))}${t.totalWait ? ` · ${t.totalWait} min waiting on platforms` : " · no waiting on platforms"}</div>
+      </div>
+      ${legsRow(t)}
+      ${chips(t, true)}
+      ${ladder}
+      ${missed}`;
+  }
+
+  function renderDetail(t) {
+    if (!t) { $("detailWrap").hidden = true; return; }
+    $("detailWrap").hidden = false;
+    const rows = [];
+    rows.push(step(t.leave, null, `<b>Leave ${esc(placeName(t.legs[0].origin))}</b>${cfg.margin ? `<div class="muted">includes ${cfg.margin} min safety margin</div>` : ""}`));
+    t.legs.forEach((l, i) => {
+      const tr = t.transfers.find((x) => x.nIdx === i);
+      if (tr) {
+        const scale = PACES.map((k) => `<span class="${k === tr.need ? "on" : ""}">${PACE_LABEL[k]} ${tr.tb[k]}′</span>`).join("");
+        const what = tr.need === "miss"
+          ? `<b>Change at ${esc(tr.at)}: only ${tr.change} min</b> · even running she'd likely miss it`
+          : `<b>Change at ${esc(tr.at)}: ${tr.change} min</b> · ${PACE_LABEL[tr.need].toLowerCase()}${tr.wait ? `, then about ${tr.wait} min on the platform` : ", straight onto the train"}`;
+        rows.push(`<div class="step change ${tr.need}"><div class="t num">${tr.change}′</div><div class="what">${what}<div class="pacescale">${scale}</div></div></div>`);
+      } else if (i > 0 && !l.walking) {
+        const w = mins(depOf(l) - arrOf(t.legs[i - 1]));
+        if (w >= 1) rows.push(`<div class="step wait ${w <= 2 ? "ok" : ""}"><div class="t num"></div><div class="what">Wait ${w} min at ${esc(placeName(l.origin))}</div></div>`);
+      }
+      if (l.bike) {
+        rows.push(step(depOf(l), null, ui.dir === "work"
+          ? `Cycle to ${esc(placeName(l.destination))}, lock up and go to the platform<div class="muted">${cfg.bikeMin} min</div>`
+          : `Get the bike and cycle home<div class="muted">${cfg.bikeMin} min</div>`));
+        return;
+      }
+      if (l.walking) {
+        const wm = mins(arrOf(l) - depOf(l));
+        if (wm < 1) return;
+        rows.push(step(depOf(l), null, `Walk ${wm} min${l.distance ? ` (${l.distance} m)` : ""} to ${esc(placeName(l.destination))}`));
+        return;
+      }
+      const planned = l.plannedDeparture && l.departure && l.departure !== l.plannedDeparture ? new Date(l.plannedDeparture) : null;
+      const warn = (l.remarks || []).filter((r) => r.type === "warning" && r.text).slice(0, 1)
+        .map((r) => `<div class="remark">${esc(r.text.slice(0, 160))}${r.text.length > 160 ? "…" : ""}</div>`).join("");
+      const plat = l.departurePlatform ? ` · platform ${esc(l.departurePlatform)}` : "";
+      rows.push(step(depOf(l), planned, `${badge(l)} to ${esc((l.direction || "").replace(/\s*\(Berlin\)$/, ""))}${l.cancelled ? ' <b style="color:var(--bad)">cancelled</b>' : ""}
+        <div class="muted">from ${esc(placeName(l.origin))}${plat} · get off at ${esc(placeName(l.destination))} (${fmtTime(arrOf(l))})</div>${warn}`));
+    });
+    rows.push(step(t.arr, null, `<b>Arrive ${esc(placeName(t.legs[t.legs.length - 1].destination))}</b>`));
+    $("detail").innerHTML = rows.join("");
+  }
+  const step = (d, planned, html) => `<div class="step"><div class="t num">${fmtTime(d)}${planned ? `<s>${fmtTime(planned)}</s>` : ""}</div><div class="what">${html}</div></div>`;
+
+  // ---------- events ----------
+  function choose(key, scroll) {
+    selected = key === selected ? null : key;
+    render();
+    if (scroll) window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  $("list").addEventListener("click", (e) => { const b = e.target.closest(".trip"); if (b) choose(b.dataset.key, true); });
+  $("board").addEventListener("click", (e) => { const b = e.target.closest(".ladder button"); if (b) { selected = null; choose(b.dataset.key); } });
+  const setUi = (patch) => { Object.assign(ui, patch); store.set("leave-now-ui", ui); selected = null; trips = []; lastFetch = 0; generation++; loading = false; render(); fetchTrips(); };
+  $("dirWork").onclick = () => setUi({ dir: "work" });
+  $("dirHome").onclick = () => setUi({ dir: "home", mode: "next" });
+  $("modeNext").onclick = () => setUi({ mode: "next" });
+  $("modeArrive").onclick = () => setUi({ mode: "arrive" });
+
+  // ---------- settings ----------
+  const draft = {};
+  let paceDraft = null;
+  function wireSearch(kind, stopsOnly, onPick) {
+    const input = $(kind + "Input"), sugg = $(kind + "Sugg"), picked = $(kind + "Picked");
+    let timer, results = [];
+    input.addEventListener("input", () => {
+      clearTimeout(timer);
+      const q = input.value.trim();
+      if (q.length < 3) { sugg.hidden = true; return; }
+      timer = setTimeout(async () => {
+        try {
+          const params = { query: q, results: 6, language: "en" };
+          if (stopsOnly) Object.assign(params, { addresses: "false", poi: "false" });
+          results = await getJSON("/locations", params);
+          sugg.innerHTML = results.map((r, i) => `<li><button type="button" data-i="${i}">${esc(placeName(r))}<small>${r.type === "stop" ? "Stop" : r.poi ? "Place" : "Address"}</small></button></li>`).join("");
+          sugg.hidden = !results.length;
+        } catch { sugg.hidden = true; }
+      }, 300);
+    });
+    sugg.addEventListener("click", (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      const r = results[+b.dataset.i];
+      sugg.hidden = true;
+      if (onPick) { onPick(r); input.value = ""; return; }
+      draft[kind] = r.type === "stop" ? { type: "stop", id: r.id, name: r.name } :
+        r.poi ? { type: "poi", poi: true, id: r.id, name: r.name, latitude: r.latitude, longitude: r.longitude } :
+        { type: "location", address: r.address, latitude: r.latitude, longitude: r.longitude };
+      input.value = placeName(r);
+      picked.textContent = "✓ " + placeName(r);
+    });
+  }
+  wireSearch("home"); wireSearch("work"); wireSearch("bikeStop", true);
+  wireSearch("stationAdd", true, (r) => {
+    if (paceDraft.stations.some((s) => s.id === r.id)) return;
+    const d = paceDraft.def;
+    paceDraft.stations.push({ id: r.id, name: placeName(r), walk: d.walk + 1, brisk: d.brisk + 1, run: d.run + 1 });
+    renderStations();
+  });
+
+  function renderStations() {
+    $("stationList").innerHTML = paceDraft.stations.map((s, i) => `
+      <div class="strow"><div class="top"><span>${esc(s.name)}</span><button type="button" data-rm="${i}">Remove</button></div>
+      <div class="trio">${PACES.map((k) => `<div class="field"><label for="st${i}${k}">${PACE_LABEL[k]}</label><input id="st${i}${k}" type="number" min="0" max="20" inputmode="numeric" data-i="${i}" data-k="${k}" value="${s[k]}"></div>`).join("")}</div></div>`).join("")
+      || '<span class="help">None yet. Add a station where changing takes longer or shorter than usual.</span>';
+  }
+  $("stationList").addEventListener("input", (e) => {
+    const el = e.target; if (el.dataset.i == null) return;
+    paceDraft.stations[+el.dataset.i][el.dataset.k] = Math.max(0, +el.value || 0);
+  });
+  $("stationList").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-rm]"); if (!b) return;
+    paceDraft.stations.splice(+b.dataset.rm, 1); renderStations();
+  });
+
+  let linesDraft = [];
+  function renderLineChips() {
+    const chip = (l) => `<button type="button" data-line="${l}" class="${l[0] === "S" ? "s" : ""}" aria-pressed="${linesDraft.includes(l)}" style="${linesDraft.includes(l) ? `background:${LINE_COLORS[l]};${l === "U4" ? "color:#111" : ""}` : ""}">${l}</button>`;
+    $("lineChips").innerHTML = `<span class="grp">U-Bahn</span>${U_LINES.map(chip).join("")}<span class="grp">S-Bahn</span>${S_LINES.map(chip).join("")}`;
+    $("lineHelp").textContent = linesDraft.length ? `Only trips using ${linesDraft.join(", ")} will be shown. Walking and the bike ride are always included.` : "";
+  }
+  $("lineChips").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-line]"); if (!b) return;
+    const l = b.dataset.line;
+    linesDraft = linesDraft.includes(l) ? linesDraft.filter((x) => x !== l) : linesDraft.concat(l);
+    renderLineChips();
+  });
+  $("presetSpandau").onclick = () => { linesDraft = ["U6", "S3", "S9"]; renderLineChips(); };
+  $("presetClear").onclick = () => { linesDraft = []; renderLineChips(); };
+
+  let draftAccess = cfg.access;
+  function showAccess() {
+    $("accessBike").setAttribute("aria-pressed", draftAccess === "bike");
+    $("accessWalk").setAttribute("aria-pressed", draftAccess !== "bike");
+    $("bikeFields").hidden = draftAccess !== "bike";
+  }
+  $("accessBike").onclick = () => { draftAccess = "bike"; showAccess(); };
+  $("accessWalk").onclick = () => { draftAccess = "walk"; showAccess(); };
+
+  $("openSettings").onclick = () => {
+    delete draft.home; delete draft.work; delete draft.bikeStop;
+    draftAccess = cfg.access || "walk"; showAccess();
+    const realStop = cfg.bikeStop && !cfg.example;
+    $("bikeStopInput").value = realStop ? placeName(cfg.bikeStop) : "";
+    $("bikeStopPicked").textContent = realStop ? "✓ saved" : "";
+    $("bikeMin").value = cfg.bikeMin || 5;
+    $("homeInput").value = cfg.example ? "" : placeName(cfg.home);
+    $("workInput").value = cfg.example ? "" : placeName(cfg.work);
+    $("homePicked").textContent = cfg.example ? "Leave empty to keep the example route" : "✓ saved";
+    $("workPicked").textContent = cfg.example ? "" : "✓ saved";
+    $("arriveBy").value = cfg.arriveBy; $("margin").value = cfg.margin; $("walk").value = cfg.walk;
+    $("productChecks").innerHTML = PRODUCTS.map((p) => `<label for="prod-${p.k}"><input type="checkbox" id="prod-${p.k}" data-k="${p.k}" ${(cfg.products || {})[p.k] === false ? "" : "checked"}><span class="badge ${p.round ? "sbahn" : ""}" style="background:${p.color}">${p.label.split(" ")[0].replace("-Bahn", "")}</span>${p.label}</label>`).join("");
+    $("productHelp").textContent = "Only trips using the ticked types are shown. Walking and the bike ride are always included.";
+    linesDraft = chosenLines().slice();
+    renderLineChips();
+    paceDraft = JSON.parse(JSON.stringify(pace));
+    $("fastest").value = paceDraft.fastest;
+    $("defWalk").value = paceDraft.def.walk; $("defBrisk").value = paceDraft.def.brisk; $("defRun").value = paceDraft.def.run;
+    renderStations();
+    $("settings").showModal();
+  };
+  $("cancelSettings").onclick = () => $("settings").close();
+  $("settingsForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const keepExample = cfg.example && !draft.home && !draft.work;
+    const home = draft.home || (cfg.example ? null : cfg.home);
+    const work = draft.work || (cfg.example ? null : cfg.work);
+    if (!keepExample && (!home || !work)) {
+      (home ? $("workPicked") : $("homePicked")).textContent = "Type an address and pick one from the list.";
+      return;
+    }
+    const bikeStop = draft.bikeStop || (cfg.example && !keepExample ? null : cfg.bikeStop);
+    if (draftAccess === "bike" && !bikeStop) {
+      $("bikeStopPicked").textContent = "Type the station name and pick it from the list.";
+      return;
+    }
+    const products = {};
+    PRODUCTS.forEach((p) => (products[p.k] = $("prod-" + p.k).checked));
+    if (!Object.values(products).some(Boolean)) {
+      $("productHelp").textContent = "Tick at least one type of transport.";
+      return;
+    }
+    const num = (id, d) => { const v = parseInt($(id).value, 10); return isNaN(v) ? d : Math.max(0, v); };
+    pace = { fastest: $("fastest").value, def: { walk: num("defWalk", 4), brisk: num("defBrisk", 3), run: num("defRun", 2) }, stations: paceDraft.stations };
+    store.set("leave-now-pace", pace);
+    cfg = Object.assign({}, keepExample ? EXAMPLE : { home, work, example: false }, {
+      arriveBy: $("arriveBy").value || "09:00", margin: +$("margin").value, walk: $("walk").value, products, lines: linesDraft.slice(),
+      access: draftAccess, bikeStop, bikeMin: +$("bikeMin").value
+    });
+    store.set("leave-now-cfg", cfg);
+    $("settings").close();
+    setUi({});
+  });
+
+  // ---------- loop ----------
+  render();
+  fetchTrips();
+  setInterval(() => { if (Date.now() - lastFetch > 60000 && !document.hidden) fetchTrips(); else render(); }, 10000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && Date.now() - lastFetch > 20000) fetchTrips(); });
+})();
+</script>
+</body>
+</html>
